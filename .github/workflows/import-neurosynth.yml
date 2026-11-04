@@ -1,0 +1,31 @@
+name: Import Neurosynth into Render Postgres
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  import-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out repository data
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install importer dependencies
+        run: python -m pip install -r requirements-import.txt
+      - name: Import all three Parquet datasets
+        env:
+          DB_URL: ${{ secrets.RENDER_EXTERNAL_DB_URL }}
+        shell: bash
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo 'Missing GitHub Actions secret' >&2
+            exit 1
+          fi
+          python create_db.py --url "$DB_URL" --data-dir . --schema ns --if-exists replace
